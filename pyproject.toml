@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tool-using-agent-evals"
+version = "0.1.0"
+description = "Evaluation framework for tool-using AI agents"
+requires-python = ">=3.11"
+dependencies = [
+  "openai-agents>=0.3,<1",
+  "python-dotenv>=1,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+]
+
+[tool.setuptools]
+packages = ["agent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
