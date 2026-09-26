@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 1 — Agent foundation**
+**Step 2 — Deterministic billing domain and tools**
 
-This first milestone establishes a minimal OpenAI Agents SDK application, automated tests, and continuous integration. Tool implementations and evaluation datasets are intentionally deferred to later milestones so each capability can be tested in isolation.
+This milestone adds a small synthetic billing domain and deterministic tool functions before connecting those tools to the LLM. The goal is to make the business logic independently testable so future agent failures can be attributed either to tool behavior or to model orchestration.
 
 ## Why this project exists
 
@@ -50,15 +50,18 @@ Evaluation framework
 ```text
 agent/
   agent.py            # Minimal billing-support agent
+  data.py             # Stable synthetic customers, invoices, and payments
+  tools.py            # Deterministic billing tool functions
 
 tests/
   test_agent.py       # Deterministic foundation tests
+  test_tools.py       # Deterministic billing-tool tests
 
 .github/workflows/
   tests.yml           # CI test workflow
 ```
 
-Additional directories for datasets, graders, evaluation runners, and reports will be added as the framework grows.
+The current billing tools are model-free and use no external I/O. Additional directories for evaluation datasets, graders, runners, and reports will be added as the framework grows.
 
 ## Local setup
 
@@ -96,13 +99,17 @@ python -m agent.agent
 pytest
 ```
 
-The Step 1 CI suite does not call the OpenAI API, so it is deterministic and does not consume API credits.
+The current CI suite does not call the OpenAI API, so it remains deterministic and does not consume API credits.
 
 ## Design decisions
 
 ### Start with a deterministic baseline
 
 The repository begins with a minimal agent and tests before tools are introduced. This gives later tool-use and evaluation behavior a clean baseline for regression analysis.
+
+### Test tools before agent orchestration
+
+The billing functions are pure and deterministic. They are tested independently before the LLM is allowed to call them, making failures easier to diagnose.
 
 ### Separate agent execution from evaluation
 
@@ -116,7 +123,7 @@ Later milestones will inspect intermediate tool calls because a correct-looking 
 
 - [x] Minimal agent foundation
 - [x] Deterministic tests and CI
-- [ ] Synthetic billing domain and tools
+- [x] Synthetic billing domain and tools
 - [ ] Tool-using agent workflow
 - [ ] Evaluation dataset
 - [ ] Tool-selection and argument graders
