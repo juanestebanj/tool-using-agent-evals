@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 2 — Deterministic billing domain and tools**
+**Step 3 — Tool-using agent orchestration**
 
-This milestone adds a small synthetic billing domain and deterministic tool functions before connecting those tools to the LLM. The goal is to make the business logic independently testable so future agent failures can be attributed either to tool behavior or to model orchestration.
+This milestone connects the LLM agent to the deterministic billing functions through a thin adapter layer. The business rules remain ordinary Python, while the model is responsible for choosing which read-only tool to call, with what arguments, and how to interpret the structured result.
 
 ## Why this project exists
 
@@ -52,6 +52,7 @@ agent/
   agent.py            # Minimal billing-support agent
   data.py             # Stable synthetic customers, invoices, and payments
   tools.py            # Deterministic billing tool functions
+  tool_adapters.py    # LLM-facing wrappers for deterministic tools
 
 tests/
   test_agent.py       # Deterministic foundation tests
@@ -111,6 +112,10 @@ The repository begins with a minimal agent and tests before tools are introduced
 
 The billing functions are pure and deterministic. They are tested independently before the LLM is allowed to call them, making failures easier to diagnose.
 
+### Keep adapters thin
+
+The LLM-facing tool layer delegates directly to deterministic business functions. Tool schemas and descriptions belong at the agent boundary; billing rules stay in the deterministic domain layer.
+
 ### Separate agent execution from evaluation
 
 The agent implementation and the evaluation system will remain separate concerns. This makes it possible to change prompts, models, or tools without coupling those changes to grading logic.
@@ -124,7 +129,7 @@ Later milestones will inspect intermediate tool calls because a correct-looking 
 - [x] Minimal agent foundation
 - [x] Deterministic tests and CI
 - [x] Synthetic billing domain and tools
-- [ ] Tool-using agent workflow
+- [x] Tool-using agent workflow
 - [ ] Evaluation dataset
 - [ ] Tool-selection and argument graders
 - [ ] Trajectory and outcome graders
