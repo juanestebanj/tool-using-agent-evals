@@ -117,7 +117,7 @@ python -m evals.run_case --prompt "I think invoice INV-1042 was charged twice."
 
 The command writes an evaluation-friendly JSON report to `results/live-run.json`, including the final response, elapsed time, tool calls, arguments, and tool outputs.
 
-On GitHub, use **Actions → Live Agent Run → Run workflow** after configuring the repository secret `OPENAI_API_KEY`. The report is uploaded as a workflow artifact rather than committed to the repository.
+On GitHub, use **Actions → Live Agent Run → Run workflow** after configuring the repository secret `OPENAI_API_KEY`. Hosted Agents SDK tracing is disabled for this workflow, and the report is uploaded as a workflow artifact rather than committed to the repository.
 
 ## Design decisions
 
