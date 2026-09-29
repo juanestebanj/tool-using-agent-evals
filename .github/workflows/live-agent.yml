@@ -1,0 +1,52 @@
+name: Live Agent Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: User prompt for the billing agent
+        required: true
+        default: I think invoice INV-1042 was charged twice.
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: pip install -e ".[dev]"
+
+      - name: Verify OpenAI API key is configured
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Repository secret OPENAI_API_KEY is not configured."
+            exit 1
+          fi
+
+      - name: Run live agent and capture trajectory
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          EVAL_PROMPT: ${{ inputs.prompt }}
+        run: python -m evals.run_case --prompt "$EVAL_PROMPT" --output results/live-run.json
+
+      - name: Upload run report
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-agent-run-${{ github.run_number }}
+          path: results/live-run.json
+          if-no-files-found: error
