@@ -15,6 +15,8 @@ permissions:
 jobs:
   run-agent:
     runs-on: ubuntu-latest
+    env:
+      OPENAI_AGENTS_DISABLE_TRACING: "1"
 
     steps:
       - name: Check out repository
