@@ -17,8 +17,8 @@ dev = [
   "pytest>=8,<9",
 ]
 
-[tool.setuptools]
-packages = ["agent"]
+[tool.setuptools.packages.find]
+include = ["agent*", "evals*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
