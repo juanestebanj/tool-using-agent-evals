@@ -7,7 +7,17 @@ def test_build_agent_has_expected_identity():
     assert agent.name == "Billing Support Agent"
 
 
-def test_baseline_instructions_require_factual_behavior():
+def test_agent_registers_expected_tools():
+    agent = build_agent()
+    tool_names = {tool.name for tool in agent.tools}
+
+    assert tool_names == {"get_customer", "get_invoice", "check_payment"}
+
+
+def test_agent_instructions_require_grounded_tool_use():
     instructions = AGENT_INSTRUCTIONS.lower()
+
+    assert "source of truth" in instructions
     assert "do not invent" in instructions
-    assert "billing" in instructions
+    assert "do not claim a duplicate charge unless" in instructions
+    assert "read-only" in instructions
