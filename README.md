@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 3 — Tool-using agent orchestration**
+**Step 4 — Observable live agent runs**
 
-This milestone connects the LLM agent to the deterministic billing functions through a thin adapter layer. The business rules remain ordinary Python, while the model is responsible for choosing which read-only tool to call, with what arguments, and how to interpret the structured result.
+This milestone adds a live-run capture path that records the agent's tool-call trajectory and final output without changing the deterministic CI path. Live model execution is manual and requires an OpenAI API key; ordinary pull-request tests remain model-free.
 
 ## Why this project exists
 
@@ -54,15 +54,20 @@ agent/
   tools.py            # Deterministic billing tool functions
   tool_adapters.py    # LLM-facing wrappers for deterministic tools
 
+evals/
+  run_case.py         # Live run + trajectory capture
+
 tests/
   test_agent.py       # Deterministic foundation tests
   test_tools.py       # Deterministic billing-tool tests
+  test_run_case.py    # Deterministic trajectory-serialization tests
 
 .github/workflows/
-  tests.yml           # CI test workflow
+  tests.yml           # Deterministic CI workflow
+  live-agent.yml      # Manually triggered live agent workflow
 ```
 
-The current billing tools are model-free and use no external I/O. Additional directories for evaluation datasets, graders, runners, and reports will be added as the framework grows.
+Normal CI remains model-free and deterministic. Live runs are isolated behind a manually triggered workflow so API cost and model variability do not affect every pull request.
 
 ## Local setup
 
@@ -100,7 +105,19 @@ python -m agent.agent
 pytest
 ```
 
-The current CI suite does not call the OpenAI API, so it remains deterministic and does not consume API credits.
+The normal CI suite does not call the OpenAI API, so it remains deterministic and does not consume API credits.
+
+## Capture a live agent run
+
+Locally:
+
+```bash
+python -m evals.run_case --prompt "I think invoice INV-1042 was charged twice."
+```
+
+The command writes an evaluation-friendly JSON report to `results/live-run.json`, including the final response, elapsed time, tool calls, arguments, and tool outputs.
+
+On GitHub, use **Actions → Live Agent Run → Run workflow** after configuring the repository secret `OPENAI_API_KEY`. The report is uploaded as a workflow artifact rather than committed to the repository.
 
 ## Design decisions
 
@@ -115,6 +132,10 @@ The billing functions are pure and deterministic. They are tested independently 
 ### Keep adapters thin
 
 The LLM-facing tool layer delegates directly to deterministic business functions. Tool schemas and descriptions belong at the agent boundary; billing rules stay in the deterministic domain layer.
+
+### Separate deterministic CI from live model execution
+
+Pull-request CI tests packaging, business logic, adapters, and trajectory serialization without making model calls. Live agent execution is manual, uses a repository secret, and produces an artifact for inspection.
 
 ### Separate agent execution from evaluation
 
