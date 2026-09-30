@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 4 — Observable live agent runs**
+**Step 5 — Deterministic trajectory graders**
 
-This milestone adds a live-run capture path that records the agent's tool-call trajectory and final output without changing the deterministic CI path. Live model execution is manual and requires an OpenAI API key; ordinary pull-request tests remain model-free.
+This milestone turns expected agent behavior into executable evaluation criteria. Named eval cases define required tools, forbidden tools, exact arguments, and expected tool order; deterministic graders compare captured run reports against those expectations without calling another model.
 
 ## Why this project exists
 
@@ -55,12 +55,16 @@ agent/
   tool_adapters.py    # LLM-facing wrappers for deterministic tools
 
 evals/
+  cases.py            # Named eval cases and expected behavior
+  graders.py          # Deterministic trajectory graders
+  grade_report.py     # Offline CLI for grading captured reports
   run_case.py         # Live run + trajectory capture
 
 tests/
   test_agent.py       # Deterministic foundation tests
   test_tools.py       # Deterministic billing-tool tests
   test_run_case.py    # Deterministic trajectory-serialization tests
+  test_graders.py     # Deterministic grader tests
 
 .github/workflows/
   tests.yml           # Deterministic CI workflow
@@ -117,6 +121,14 @@ python -m evals.run_case --prompt "I think invoice INV-1042 was charged twice."
 
 The command writes an evaluation-friendly JSON report to `results/live-run.json`, including the final response, elapsed time, tool calls, arguments, and tool outputs.
 
+Grade a captured report against the initial duplicate-charge case:
+
+```bash
+python -m evals.grade_report --case duplicate-charge --report results/live-run.json
+```
+
+The grader exits with a non-zero status when the deterministic trajectory expectations fail, which makes it suitable for later regression automation.
+
 On GitHub, use **Actions → Live Agent Run → Run workflow** after configuring the repository secret `OPENAI_API_KEY`. Hosted Agents SDK tracing is disabled for this workflow, and the report is uploaded as a workflow artifact rather than committed to the repository.
 
 ## Design decisions
@@ -141,6 +153,10 @@ Pull-request CI tests packaging, business logic, adapters, and trajectory serial
 
 The agent implementation and the evaluation system will remain separate concerns. This makes it possible to change prompts, models, or tools without coupling those changes to grading logic.
 
+### Prefer deterministic graders for exact properties
+
+Tool names, exact arguments, call ordering, and forbidden actions can be checked directly in code. These checks are cheaper, reproducible, and easier to debug than asking another LLM to judge them.
+
 ### Evaluate trajectories, not only final answers
 
 Later milestones will inspect intermediate tool calls because a correct-looking response can still be produced through an incorrect, inefficient, or unsafe trajectory.
@@ -151,8 +167,8 @@ Later milestones will inspect intermediate tool calls because a correct-looking 
 - [x] Deterministic tests and CI
 - [x] Synthetic billing domain and tools
 - [x] Tool-using agent workflow
-- [ ] Evaluation dataset
-- [ ] Tool-selection and argument graders
+- [x] Evaluation dataset
+- [x] Tool-selection and argument graders
 - [ ] Trajectory and outcome graders
 - [ ] Latency, token, and cost metrics
 - [ ] Regression suite and example evaluation report
