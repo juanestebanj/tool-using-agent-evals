@@ -1,4 +1,4 @@
-from evals.cases import DUPLICATE_CHARGE_CASE
+from evals.cases import DUPLICATE_CHARGE_CASE, SINGLE_CHARGE_CASE
 from evals.graders import (
     evaluate_report,
     grade_answer_outcome,
@@ -154,3 +154,20 @@ def test_correct_trajectory_can_fail_when_final_answer_is_wrong():
     assert result["checks"]["exact_arguments"]["passed"] is True
     assert result["checks"]["answer_outcome"]["passed"] is False
     assert result["passed"] is False
+
+
+def test_single_charge_case_accepts_negated_duplicate_phrase():
+    report = {
+        "trajectory": _trajectory(
+            ("check_payment", {"invoice_id": "INV-2001"}),
+        ),
+        "final_output": (
+            "No. Invoice INV-2001 has one successful payment; "
+            "no duplicate charge was detected."
+        ),
+    }
+
+    result = evaluate_report(report, SINGLE_CHARGE_CASE)
+
+    assert result["checks"]["answer_outcome"]["passed"] is True
+    assert result["passed"] is True
