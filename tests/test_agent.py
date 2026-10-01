@@ -21,3 +21,13 @@ def test_agent_instructions_require_grounded_tool_use():
     assert "do not invent" in instructions
     assert "do not claim a duplicate charge unless" in instructions
     assert "read-only" in instructions
+
+
+def test_agent_instructions_define_tool_responsibilities():
+    instructions = AGENT_INSTRUCTIONS.lower()
+
+    assert "narrowest tool" in instructions
+    assert "get_customer for customer" in instructions
+    assert "get_invoice for invoice metadata" in instructions
+    assert "check_payment for payment" in instructions
+    assert "do not call an additional tool" in instructions
