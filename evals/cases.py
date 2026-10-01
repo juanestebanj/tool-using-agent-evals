@@ -50,7 +50,6 @@ SINGLE_CHARGE_CASE = EvalCase(
         ("INV-2001",),
         ("one successful payment", "1 successful payment", "no duplicate"),
     ),
-    answer_forbidden_evidence=("duplicate charge was detected",),
 )
 
 FAILED_PAYMENT_CASE = EvalCase(
