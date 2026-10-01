@@ -139,7 +139,7 @@ Run the complete live regression suite locally:
 python -m evals.run_suite --output results/regression-suite.json
 ```
 
-The current suite covers duplicate charge, single charge, failed payment, missing invoice ID, and unknown invoice behavior. On GitHub, use **Actions → Live Regression Suite → Run workflow**.
+The current suite covers duplicate charge, single charge, failed payment, missing invoice ID, unknown invoice, invoice due-date lookup, and customer-status lookup. On GitHub, use **Actions → Live Regression Suite → Run workflow**.
 
 On GitHub, use **Actions → Live Agent Run → Run workflow** after configuring the repository secret `OPENAI_API_KEY`. Hosted Agents SDK tracing is disabled for this workflow, and the report is uploaded as a workflow artifact rather than committed to the repository.
 
@@ -164,6 +164,10 @@ Pull-request CI tests packaging, business logic, adapters, and trajectory serial
 ### Separate agent execution from evaluation
 
 The agent implementation and the evaluation system will remain separate concerns. This makes it possible to change prompts, models, or tools without coupling those changes to grading logic.
+
+### Route by tool responsibility, not ritual sequences
+
+The agent should choose the narrowest tool that directly answers the user's question. Payment questions use `check_payment`; invoice-metadata questions use `get_invoice`; customer questions use `get_customer`. The evals penalize redundant calls when one tool already provides the facts required by the task.
 
 ### Test contrasting behaviors, not only happy paths
 

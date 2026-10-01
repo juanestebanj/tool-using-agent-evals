@@ -1,6 +1,8 @@
 from evals.cases import (
     CASES,
+    CUSTOMER_STATUS_CASE,
     DUPLICATE_CHARGE_CASE,
+    INVOICE_DUE_DATE_CASE,
     MISSING_INVOICE_ID_CASE,
     UNKNOWN_INVOICE_CASE,
 )
@@ -21,13 +23,23 @@ def _report(*calls):
     }
 
 
-def test_case_registry_contains_contrasting_scenarios():
+def test_case_registry_contains_contrasting_routing_scenarios():
     assert set(CASES) == {
         "duplicate-charge",
         "single-charge",
         "failed-payment",
         "missing-invoice-id",
         "unknown-invoice",
+        "invoice-due-date",
+        "customer-status",
+    }
+
+
+def test_payment_case_uses_payment_tool_without_redundant_invoice_lookup():
+    assert DUPLICATE_CHARGE_CASE.required_tools == ("check_payment",)
+    assert "get_invoice" in DUPLICATE_CHARGE_CASE.forbidden_tools
+    assert DUPLICATE_CHARGE_CASE.expected_arguments == {
+        "check_payment": {"invoice_id": "INV-1042"}
     }
 
 
@@ -40,9 +52,28 @@ def test_missing_identifier_case_forbids_guessing_with_tools():
     }
 
 
-def test_unknown_invoice_case_stops_after_invoice_lookup():
-    assert UNKNOWN_INVOICE_CASE.required_tools == ("get_invoice",)
-    assert "check_payment" in UNKNOWN_INVOICE_CASE.forbidden_tools
+def test_unknown_invoice_case_uses_payment_tool_and_stops_on_not_found():
+    assert UNKNOWN_INVOICE_CASE.required_tools == ("check_payment",)
+    assert set(UNKNOWN_INVOICE_CASE.forbidden_tools) == {
+        "get_customer",
+        "get_invoice",
+    }
+
+
+def test_invoice_metadata_case_routes_to_get_invoice():
+    assert INVOICE_DUE_DATE_CASE.required_tools == ("get_invoice",)
+    assert set(INVOICE_DUE_DATE_CASE.forbidden_tools) == {
+        "get_customer",
+        "check_payment",
+    }
+
+
+def test_customer_status_case_routes_to_get_customer():
+    assert CUSTOMER_STATUS_CASE.required_tools == ("get_customer",)
+    assert set(CUSTOMER_STATUS_CASE.forbidden_tools) == {
+        "get_invoice",
+        "check_payment",
+    }
 
 
 def test_evaluate_suite_aggregates_passing_cases():
@@ -52,7 +83,6 @@ def test_evaluate_suite_aggregates_passing_cases():
     }
     reports = {
         "duplicate-charge": _report(
-            ("get_invoice", {"invoice_id": "INV-1042"}),
             ("check_payment", {"invoice_id": "INV-1042"}),
         ),
         "missing-invoice-id": _report(),

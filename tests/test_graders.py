@@ -23,7 +23,6 @@ def _trajectory(*calls):
 def test_duplicate_charge_case_passes_expected_trajectory():
     report = {
         "trajectory": _trajectory(
-            ("get_invoice", {"invoice_id": "INV-1042"}),
             ("check_payment", {"invoice_id": "INV-1042"}),
         )
     }
