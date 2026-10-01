@@ -1,7 +1,8 @@
-"""Deterministic graders for captured agent trajectories."""
+"""Deterministic graders for captured agent trajectories and outcomes."""
 
 from __future__ import annotations
 
+import unicodedata
 from typing import Any
 
 from evals.cases import EvalCase
@@ -9,6 +10,13 @@ from evals.cases import EvalCase
 
 def _tool_calls(trajectory: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [item for item in trajectory if item.get("type") == "tool_call"]
+
+
+def _normalize_text(value: str) -> str:
+    """Normalize answer text enough for stable evidence matching."""
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    normalized = normalized.replace("’", "'").replace("‘", "'")
+    return " ".join(normalized.split())
 
 
 def grade_required_tools(
@@ -97,8 +105,42 @@ def grade_tool_order(
     }
 
 
+def grade_answer_outcome(
+    final_output: Any,
+    required_evidence: tuple[tuple[str, ...], ...],
+    forbidden_evidence: tuple[str, ...],
+) -> dict[str, Any]:
+    """Check narrow factual evidence in the final natural-language answer.
+
+    Each required evidence group is an OR condition: at least one phrase in the group
+    must appear. Every group must pass. Forbidden phrases must not appear.
+    """
+    text = final_output if isinstance(final_output, str) else ""
+    normalized = _normalize_text(text)
+
+    missing_groups: list[list[str]] = []
+    for alternatives in required_evidence:
+        normalized_alternatives = [_normalize_text(item) for item in alternatives]
+        if not any(item in normalized for item in normalized_alternatives):
+            missing_groups.append(list(alternatives))
+
+    found_forbidden = [
+        phrase
+        for phrase in forbidden_evidence
+        if _normalize_text(phrase) in normalized
+    ]
+
+    return {
+        "passed": bool(text) and not missing_groups and not found_forbidden,
+        "required_evidence": [list(group) for group in required_evidence],
+        "missing_evidence_groups": missing_groups,
+        "forbidden_evidence": list(forbidden_evidence),
+        "found_forbidden_evidence": found_forbidden,
+    }
+
+
 def evaluate_report(report: dict[str, Any], case: EvalCase) -> dict[str, Any]:
-    """Run all deterministic trajectory graders for one captured agent report."""
+    """Run deterministic trajectory and outcome graders for one captured report."""
     trajectory = report.get("trajectory", [])
 
     checks = {
@@ -108,6 +150,11 @@ def evaluate_report(report: dict[str, Any], case: EvalCase) -> dict[str, Any]:
             trajectory, case.expected_arguments
         ),
         "tool_order": grade_tool_order(trajectory, case.ordered_tools),
+        "answer_outcome": grade_answer_outcome(
+            report.get("final_output"),
+            case.answer_required_evidence,
+            case.answer_forbidden_evidence,
+        ),
     }
 
     return {

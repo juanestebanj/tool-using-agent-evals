@@ -8,7 +8,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class EvalCase:
-    """Expected deterministic trajectory properties for one agent task."""
+    """Expected deterministic trajectory and answer properties for one agent task."""
 
     id: str
     prompt: str
@@ -16,6 +16,8 @@ class EvalCase:
     forbidden_tools: tuple[str, ...]
     expected_arguments: dict[str, dict[str, Any]]
     ordered_tools: tuple[str, ...]
+    answer_required_evidence: tuple[tuple[str, ...], ...] = ()
+    answer_forbidden_evidence: tuple[str, ...] = ()
 
 
 DUPLICATE_CHARGE_CASE = EvalCase(
@@ -27,6 +29,12 @@ DUPLICATE_CHARGE_CASE = EvalCase(
         "check_payment": {"invoice_id": "INV-1042"},
     },
     ordered_tools=("check_payment",),
+    answer_required_evidence=(
+        ("INV-1042",),
+        ("charged twice", "duplicate charge"),
+        ("two successful", "2 successful"),
+    ),
+    answer_forbidden_evidence=("no duplicate", "not charged twice"),
 )
 
 SINGLE_CHARGE_CASE = EvalCase(
@@ -38,6 +46,11 @@ SINGLE_CHARGE_CASE = EvalCase(
         "check_payment": {"invoice_id": "INV-2001"},
     },
     ordered_tools=("check_payment",),
+    answer_required_evidence=(
+        ("INV-2001",),
+        ("one successful payment", "1 successful payment", "no duplicate"),
+    ),
+    answer_forbidden_evidence=("duplicate charge was detected",),
 )
 
 FAILED_PAYMENT_CASE = EvalCase(
@@ -49,6 +62,11 @@ FAILED_PAYMENT_CASE = EvalCase(
         "check_payment": {"invoice_id": "INV-1043"},
     },
     ordered_tools=("check_payment",),
+    answer_required_evidence=(
+        ("INV-1043",),
+        ("failed", "not successful", "no successful payment"),
+    ),
+    answer_forbidden_evidence=("payment was successful", "payment succeeded"),
 )
 
 MISSING_INVOICE_ID_CASE = EvalCase(
@@ -58,6 +76,9 @@ MISSING_INVOICE_ID_CASE = EvalCase(
     forbidden_tools=("get_customer", "get_invoice", "check_payment"),
     expected_arguments={},
     ordered_tools=(),
+    answer_required_evidence=(
+        ("invoice id", "invoice number", "invoice identifier"),
+    ),
 )
 
 UNKNOWN_INVOICE_CASE = EvalCase(
@@ -69,6 +90,10 @@ UNKNOWN_INVOICE_CASE = EvalCase(
         "check_payment": {"invoice_id": "INV-9999"},
     },
     ordered_tools=("check_payment",),
+    answer_required_evidence=(
+        ("INV-9999",),
+        ("not found", "couldn't find", "couldn’t find", "cannot find", "does not exist"),
+    ),
 )
 
 INVOICE_DUE_DATE_CASE = EvalCase(
@@ -80,6 +105,10 @@ INVOICE_DUE_DATE_CASE = EvalCase(
         "get_invoice": {"invoice_id": "INV-1043"},
     },
     ordered_tools=("get_invoice",),
+    answer_required_evidence=(
+        ("INV-1043",),
+        ("2026-10-15", "October 15, 2026", "Oct 15, 2026"),
+    ),
 )
 
 CUSTOMER_STATUS_CASE = EvalCase(
@@ -91,6 +120,11 @@ CUSTOMER_STATUS_CASE = EvalCase(
         "get_customer": {"customer_id": "CUST-001"},
     },
     ordered_tools=("get_customer",),
+    answer_required_evidence=(
+        ("CUST-001",),
+        ("active",),
+    ),
+    answer_forbidden_evidence=("inactive",),
 )
 
 CASES: dict[str, EvalCase] = {

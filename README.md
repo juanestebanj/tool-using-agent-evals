@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 6 — Multi-case live regression suite**
+**Step 7 — Deterministic outcome grading**
 
-This milestone expands the eval set beyond a single happy path and adds a live regression-suite runner. Multiple contrasting cases are executed against the same agent, graded deterministically, and aggregated into one suite-level result.
+This milestone adds deterministic final-answer grading alongside trajectory grading. Each eval case declares narrow factual evidence that must appear in the answer, plus contradictions that must not appear, so a correct tool trajectory can still fail when the final answer misstates the result.
 
 ## Why this project exists
 
@@ -177,9 +177,13 @@ A reliable agent should behave correctly when the answer is positive, negative, 
 
 Tool names, exact arguments, call ordering, and forbidden actions can be checked directly in code. These checks are cheaper, reproducible, and easier to debug than asking another LLM to judge them.
 
+### Separate trajectory correctness from outcome correctness
+
+A correct trajectory does not guarantee a correct final answer. The framework now grades both. Deterministic outcome checks use small groups of acceptable factual phrases rather than exact full-string matching, so wording can vary while essential facts remain testable.
+
 ### Evaluate trajectories, not only final answers
 
-Later milestones will inspect intermediate tool calls because a correct-looking response can still be produced through an incorrect, inefficient, or unsafe trajectory.
+Intermediate tool calls still matter because a correct-looking response can be produced through an incorrect, inefficient, or unsafe trajectory.
 
 ## Roadmap
 
@@ -189,7 +193,7 @@ Later milestones will inspect intermediate tool calls because a correct-looking 
 - [x] Tool-using agent workflow
 - [x] Evaluation dataset
 - [x] Tool-selection and argument graders
-- [ ] Trajectory and outcome graders
+- [x] Trajectory and deterministic outcome graders
 - [ ] Latency, token, and cost metrics
 - [x] Regression suite
 - [ ] Example evaluation report

@@ -1,6 +1,7 @@
 from evals.cases import DUPLICATE_CHARGE_CASE
 from evals.graders import (
     evaluate_report,
+    grade_answer_outcome,
     grade_exact_arguments,
     grade_forbidden_tools,
     grade_required_tools,
@@ -20,11 +21,15 @@ def _trajectory(*calls):
     ]
 
 
-def test_duplicate_charge_case_passes_expected_trajectory():
+def test_duplicate_charge_case_passes_expected_trajectory_and_outcome():
     report = {
         "trajectory": _trajectory(
             ("check_payment", {"invoice_id": "INV-1042"}),
-        )
+        ),
+        "final_output": (
+            "Invoice INV-1042 was charged twice. "
+            "Two successful payments were recorded."
+        ),
     }
 
     result = evaluate_report(report, DUPLICATE_CHARGE_CASE)
@@ -89,3 +94,63 @@ def test_tool_order_allows_unrelated_non_forbidden_calls_between_expected_tools(
     )
 
     assert result["passed"] is True
+
+
+def test_answer_outcome_accepts_alternative_phrasing():
+    result = grade_answer_outcome(
+        "I couldn't find invoice INV-9999.",
+        (
+            ("INV-9999",),
+            ("not found", "couldn't find", "cannot find"),
+        ),
+        (),
+    )
+
+    assert result["passed"] is True
+
+
+def test_answer_outcome_reports_missing_required_fact():
+    result = grade_answer_outcome(
+        "There were two successful payments.",
+        (
+            ("INV-1042",),
+            ("charged twice", "duplicate charge"),
+        ),
+        (),
+    )
+
+    assert result["passed"] is False
+    assert result["missing_evidence_groups"] == [
+        ["INV-1042"],
+        ["charged twice", "duplicate charge"],
+    ]
+
+
+def test_answer_outcome_detects_forbidden_contradiction():
+    result = grade_answer_outcome(
+        "Invoice INV-1042 had two successful payments, but no duplicate was found.",
+        (
+            ("INV-1042",),
+            ("two successful",),
+        ),
+        ("no duplicate",),
+    )
+
+    assert result["passed"] is False
+    assert result["found_forbidden_evidence"] == ["no duplicate"]
+
+
+def test_correct_trajectory_can_fail_when_final_answer_is_wrong():
+    report = {
+        "trajectory": _trajectory(
+            ("check_payment", {"invoice_id": "INV-1042"}),
+        ),
+        "final_output": "Invoice INV-1042 had no duplicate charge.",
+    }
+
+    result = evaluate_report(report, DUPLICATE_CHARGE_CASE)
+
+    assert result["checks"]["required_tools"]["passed"] is True
+    assert result["checks"]["exact_arguments"]["passed"] is True
+    assert result["checks"]["answer_outcome"]["passed"] is False
+    assert result["passed"] is False
