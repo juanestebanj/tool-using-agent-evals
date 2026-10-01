@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 5 — Deterministic trajectory graders**
+**Step 6 — Multi-case live regression suite**
 
-This milestone turns expected agent behavior into executable evaluation criteria. Named eval cases define required tools, forbidden tools, exact arguments, and expected tool order; deterministic graders compare captured run reports against those expectations without calling another model.
+This milestone expands the eval set beyond a single happy path and adds a live regression-suite runner. Multiple contrasting cases are executed against the same agent, graded deterministically, and aggregated into one suite-level result.
 
 ## Why this project exists
 
@@ -59,16 +59,20 @@ evals/
   graders.py          # Deterministic trajectory graders
   grade_report.py     # Offline CLI for grading captured reports
   run_case.py         # Live run + trajectory capture
+  suite.py            # Deterministic multi-case aggregation
+  run_suite.py        # Live regression-suite runner
 
 tests/
   test_agent.py       # Deterministic foundation tests
   test_tools.py       # Deterministic billing-tool tests
   test_run_case.py    # Deterministic trajectory-serialization tests
   test_graders.py     # Deterministic grader tests
+  test_suite.py       # Regression-suite aggregation tests
 
 .github/workflows/
   tests.yml           # Deterministic CI workflow
   live-agent.yml      # Manually triggered live agent workflow
+  live-regression.yml # Manually triggered multi-case regression suite
 ```
 
 Normal CI remains model-free and deterministic. Live runs are isolated behind a manually triggered workflow so API cost and model variability do not affect every pull request.
@@ -127,7 +131,15 @@ Grade a captured report against the initial duplicate-charge case:
 python -m evals.grade_report --case duplicate-charge --report results/live-run.json
 ```
 
-The grader exits with a non-zero status when the deterministic trajectory expectations fail, which makes it suitable for later regression automation.
+The grader exits with a non-zero status when the deterministic trajectory expectations fail, which makes it suitable for regression automation.
+
+Run the complete live regression suite locally:
+
+```bash
+python -m evals.run_suite --output results/regression-suite.json
+```
+
+The current suite covers duplicate charge, single charge, failed payment, missing invoice ID, and unknown invoice behavior. On GitHub, use **Actions → Live Regression Suite → Run workflow**.
 
 On GitHub, use **Actions → Live Agent Run → Run workflow** after configuring the repository secret `OPENAI_API_KEY`. Hosted Agents SDK tracing is disabled for this workflow, and the report is uploaded as a workflow artifact rather than committed to the repository.
 
@@ -153,6 +165,10 @@ Pull-request CI tests packaging, business logic, adapters, and trajectory serial
 
 The agent implementation and the evaluation system will remain separate concerns. This makes it possible to change prompts, models, or tools without coupling those changes to grading logic.
 
+### Test contrasting behaviors, not only happy paths
+
+A reliable agent should behave correctly when the answer is positive, negative, missing information, or the requested resource does not exist. The regression suite deliberately includes cases that require different tool-use decisions rather than repeating one successful pattern.
+
 ### Prefer deterministic graders for exact properties
 
 Tool names, exact arguments, call ordering, and forbidden actions can be checked directly in code. These checks are cheaper, reproducible, and easier to debug than asking another LLM to judge them.
@@ -171,7 +187,8 @@ Later milestones will inspect intermediate tool calls because a correct-looking 
 - [x] Tool-selection and argument graders
 - [ ] Trajectory and outcome graders
 - [ ] Latency, token, and cost metrics
-- [ ] Regression suite and example evaluation report
+- [x] Regression suite
+- [ ] Example evaluation report
 
 ## License
 
