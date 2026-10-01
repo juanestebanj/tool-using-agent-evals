@@ -9,8 +9,9 @@ from evals.cases import (
 from evals.suite import evaluate_suite
 
 
-def _report(*calls):
+def _report(*calls, final_output: str):
     return {
+        "final_output": final_output,
         "trajectory": [
             {
                 "type": "tool_call",
@@ -84,8 +85,14 @@ def test_evaluate_suite_aggregates_passing_cases():
     reports = {
         "duplicate-charge": _report(
             ("check_payment", {"invoice_id": "INV-1042"}),
+            final_output=(
+                "Invoice INV-1042 was charged twice. "
+                "Two successful payments were recorded."
+            ),
         ),
-        "missing-invoice-id": _report(),
+        "missing-invoice-id": _report(
+            final_output="Please provide the invoice ID."
+        ),
     }
 
     result = evaluate_suite(reports, cases)
