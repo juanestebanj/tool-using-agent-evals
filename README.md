@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 8 — Semantic outcome grading with LLM-as-judge**
+**Step 9 — Latency, token usage, and estimated cost metrics**
 
-This milestone adds a structured LLM-as-judge for semantic answer correctness while preserving deterministic trajectory grading. The judge evaluates whether the answer addresses the request, is grounded in captured tool evidence, avoids contradictions, and avoids unsupported billing claims.
+This milestone instruments both the evaluated agent and the semantic judge. Every live report now records latency, request count, input/output/cached/reasoning tokens, and an estimated USD cost; suite reports aggregate those measurements across all cases.
 
 ## Why this project exists
 
@@ -58,6 +58,7 @@ evals/
   cases.py            # Named eval cases and expected behavior
   graders.py          # Deterministic trajectory + smoke outcome graders
   semantic_grader.py  # Structured LLM-as-judge for semantic outcomes
+  metrics.py          # Runtime, usage, and estimated-cost instrumentation
   grade_report.py     # Offline CLI for grading captured reports
   run_case.py         # Live run + trajectory capture
   suite.py            # Deterministic multi-case aggregation
@@ -124,7 +125,7 @@ Locally:
 python -m evals.run_case --prompt "I think invoice INV-1042 was charged twice."
 ```
 
-The command writes an evaluation-friendly JSON report to `results/live-run.json`, including the final response, elapsed time, tool calls, arguments, and tool outputs.
+The command writes an evaluation-friendly JSON report to `results/live-run.json`, including the final response, elapsed time, token usage, estimated cost, tool calls, arguments, and tool outputs.
 
 Grade a captured report against the initial duplicate-charge case:
 
@@ -182,7 +183,13 @@ Tool names, exact arguments, call ordering, and forbidden actions are checked di
 
 Natural-language correctness can depend on paraphrase, negation, implication, and whether a claim is actually supported by tool evidence. The live regression suite therefore uses a separate structured judge for semantic outcome correctness. Phrase matching remains a cheap diagnostic/smoke check, but when a semantic judgment is present it is not the gating authority for answer meaning.
 
-The judge model defaults to `gpt-6-luna` and can be overridden with `EVAL_JUDGE_MODEL`. Pinning the judge model is recommended when comparing regression runs so changes in the judge do not get confused with changes in the agent.
+The evaluated agent and judge both default to `gpt-6-luna` and can be overridden with `AGENT_MODEL` and `EVAL_JUDGE_MODEL`. Pinning both models is important when comparing regression runs so model changes do not get confused with prompt, tool, latency, or cost changes.
+
+### Measure quality together with operational cost
+
+The Agents SDK already exposes aggregated usage for each run. The framework captures those normalized counters rather than estimating tokens from text. Agent latency and judge latency are recorded separately, and suite-level totals combine both so the cost of evaluation itself is visible.
+
+Cost is explicitly an estimate rather than a billing record. The pricing table is isolated in `evals/metrics.py`, includes an `as-of` date, and currently covers Standard short-context `gpt-6-luna` text pricing. Unknown models retain token metrics but return no estimated price.
 
 ### Separate trajectory correctness from outcome correctness
 
@@ -201,7 +208,7 @@ Intermediate tool calls still matter because a correct-looking response can be p
 - [x] Evaluation dataset
 - [x] Tool-selection and argument graders
 - [x] Trajectory, deterministic outcome, and semantic LLM-as-judge graders
-- [ ] Latency, token, and cost metrics
+- [x] Latency, token, and cost metrics
 - [x] Regression suite
 - [ ] Example evaluation report
 

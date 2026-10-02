@@ -6,6 +6,7 @@ from typing import Any
 
 from evals.cases import EvalCase
 from evals.graders import evaluate_report
+from evals.metrics import aggregate_run_metrics
 
 
 def evaluate_suite(
@@ -53,10 +54,17 @@ def evaluate_suite(
     passed_count = sum(1 for result in case_results if result["passed"])
     total_count = len(case_results)
 
+    measured_reports = [
+        result["report"]
+        for result in case_results
+        if isinstance(result.get("report"), dict)
+    ]
+
     return {
         "passed": passed_count == total_count,
         "passed_count": passed_count,
         "failed_count": total_count - passed_count,
         "total_count": total_count,
+        "metrics": aggregate_run_metrics(measured_reports),
         "cases": case_results,
     }

@@ -12,6 +12,7 @@ from typing import Any
 from agents import Runner
 
 from agent.agent import build_agent
+from evals.metrics import serialize_usage
 
 
 def _raw_field(item: Any, name: str) -> Any:
@@ -71,14 +72,19 @@ def serialize_tool_trajectory(items: list[Any]) -> list[dict[str, Any]]:
 
 def run_case(prompt: str) -> dict[str, Any]:
     """Execute one live agent case and return an evaluation-friendly report."""
+    agent = build_agent()
     started = time.perf_counter()
-    result = Runner.run_sync(build_agent(), prompt)
+    result = Runner.run_sync(agent, prompt)
     elapsed_seconds = time.perf_counter() - started
 
     return {
         "prompt": prompt,
         "final_output": result.final_output,
         "elapsed_seconds": round(elapsed_seconds, 3),
+        "usage_metrics": serialize_usage(
+            result.context_wrapper.usage,
+            model=str(agent.model),
+        ),
         "trajectory": serialize_tool_trajectory(result.new_items),
     }
 

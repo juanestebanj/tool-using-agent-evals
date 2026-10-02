@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OPENAI_AGENTS_DISABLE_TRACING: "1"
+      AGENT_MODEL: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
       EVAL_JUDGE_MODEL: ${{ vars.EVAL_JUDGE_MODEL || 'gpt-6-luna' }}
 
     steps:

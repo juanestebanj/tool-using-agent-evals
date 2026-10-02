@@ -10,6 +10,27 @@ from evals.semantic_grader import (
 )
 
 
+def _usage():
+    return SimpleNamespace(
+        requests=1,
+        input_tokens=100,
+        output_tokens=20,
+        total_tokens=120,
+        input_tokens_details=SimpleNamespace(
+            cached_tokens=0,
+            cache_write_tokens=0,
+        ),
+        output_tokens_details=SimpleNamespace(reasoning_tokens=5),
+    )
+
+
+def _result(final_output):
+    return SimpleNamespace(
+        final_output=final_output,
+        context_wrapper=SimpleNamespace(usage=_usage()),
+    )
+
+
 def _report():
     return {
         "prompt": "Was invoice INV-2001 charged more than once?",
@@ -52,15 +73,13 @@ def test_build_judge_input_contains_prompt_trajectory_and_answer():
 
 def test_judge_report_passes_when_all_rubric_dimensions_pass():
     def fake_run_sync(agent, prompt):
-        return SimpleNamespace(
-            final_output={
+        return _result({
                 "answers_request": True,
                 "grounded_in_evidence": True,
                 "no_contradictions": True,
                 "no_unsupported_claims": True,
                 "reason": "The answer matches the payment evidence.",
-            }
-        )
+            })
 
     result = judge_report(_report(), run_sync=fake_run_sync, model="gpt-6-luna")
 
@@ -70,15 +89,13 @@ def test_judge_report_passes_when_all_rubric_dimensions_pass():
 
 def test_judge_report_fails_when_any_semantic_dimension_fails():
     def fake_run_sync(agent, prompt):
-        return SimpleNamespace(
-            final_output={
+        return _result({
                 "answers_request": True,
                 "grounded_in_evidence": True,
                 "no_contradictions": False,
                 "no_unsupported_claims": True,
                 "reason": "The answer contradicts the tool output.",
-            }
-        )
+            })
 
     result = judge_report(_report(), run_sync=fake_run_sync)
 
@@ -88,15 +105,13 @@ def test_judge_report_fails_when_any_semantic_dimension_fails():
 
 def test_judge_report_rejects_malformed_boolean_field():
     def fake_run_sync(agent, prompt):
-        return SimpleNamespace(
-            final_output={
+        return _result({
                 "answers_request": "yes",
                 "grounded_in_evidence": True,
                 "no_contradictions": True,
                 "no_unsupported_claims": True,
                 "reason": "Malformed.",
-            }
-        )
+            })
 
     with pytest.raises(TypeError, match="answers_request"):
         judge_report(_report(), run_sync=fake_run_sync)
