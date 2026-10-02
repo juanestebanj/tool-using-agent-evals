@@ -1,10 +1,22 @@
-from agent.agent import AGENT_INSTRUCTIONS, AGENT_NAME, build_agent
+from agent.agent import (
+    AGENT_INSTRUCTIONS,
+    AGENT_NAME,
+    DEFAULT_AGENT_MODEL,
+    build_agent,
+)
 
 
 def test_build_agent_has_expected_identity():
     agent = build_agent()
     assert agent.name == AGENT_NAME
     assert agent.name == "Billing Support Agent"
+
+
+def test_agent_uses_pinned_default_model():
+    agent = build_agent()
+
+    assert agent.model == DEFAULT_AGENT_MODEL
+    assert agent.model == "gpt-6-luna"
 
 
 def test_agent_registers_expected_tools():
