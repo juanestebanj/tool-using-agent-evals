@@ -126,3 +126,53 @@ def test_evaluate_suite_marks_execution_error_as_failure():
 
     assert result["passed"] is False
     assert result["cases"][0]["error"]["type"] == "RuntimeError"
+
+
+def test_semantic_judge_can_pass_a_valid_paraphrase_when_smoke_matcher_misses():
+    cases = {DUPLICATE_CHARGE_CASE.id: DUPLICATE_CHARGE_CASE}
+    report = _report(
+        ("check_payment", {"invoice_id": "INV-1042"}),
+        final_output=(
+            "INV-1042 shows two successful payments for the same invoice amount."
+        ),
+    )
+    report["semantic_judgment"] = {
+        "passed": True,
+        "answers_request": True,
+        "grounded_in_evidence": True,
+        "no_contradictions": True,
+        "no_unsupported_claims": True,
+        "reason": "The answer accurately communicates the duplicate-payment outcome.",
+    }
+
+    result = evaluate_suite({"duplicate-charge": report}, cases)
+    evaluation = result["cases"][0]["evaluation"]
+
+    assert evaluation["checks"]["answer_outcome_smoke"]["passed"] is False
+    assert evaluation["checks"]["semantic_outcome"]["passed"] is True
+    assert evaluation["passed"] is True
+
+
+def test_semantic_judge_failure_blocks_suite_even_when_smoke_check_passes():
+    cases = {DUPLICATE_CHARGE_CASE.id: DUPLICATE_CHARGE_CASE}
+    report = _report(
+        ("check_payment", {"invoice_id": "INV-1042"}),
+        final_output=(
+            "Invoice INV-1042 was charged twice. Two successful payments were recorded."
+        ),
+    )
+    report["semantic_judgment"] = {
+        "passed": False,
+        "answers_request": True,
+        "grounded_in_evidence": False,
+        "no_contradictions": True,
+        "no_unsupported_claims": True,
+        "reason": "The answer is not sufficiently grounded.",
+    }
+
+    result = evaluate_suite({"duplicate-charge": report}, cases)
+    evaluation = result["cases"][0]["evaluation"]
+
+    assert evaluation["checks"]["answer_outcome_smoke"]["passed"] is True
+    assert evaluation["checks"]["semantic_outcome"]["passed"] is False
+    assert evaluation["passed"] is False
