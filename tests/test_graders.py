@@ -1,4 +1,4 @@
-from evals.cases import DUPLICATE_CHARGE_CASE, SINGLE_CHARGE_CASE
+from evals.cases import DUPLICATE_CHARGE_CASE, SINGLE_CHARGE_CASE, UNKNOWN_INVOICE_CASE
 from evals.graders import (
     evaluate_report,
     grade_answer_outcome,
@@ -168,6 +168,23 @@ def test_single_charge_case_accepts_negated_duplicate_phrase():
     }
 
     result = evaluate_report(report, SINGLE_CHARGE_CASE)
+
+    assert result["checks"]["answer_outcome"]["passed"] is True
+    assert result["passed"] is True
+
+
+def test_unknown_invoice_case_accepts_could_not_be_found_phrasing():
+    report = {
+        "trajectory": _trajectory(
+            ("check_payment", {"invoice_id": "INV-9999"}),
+        ),
+        "final_output": (
+            "Invoice INV-9999 could not be found, so I can’t verify "
+            "duplicate charges. Please confirm the invoice ID."
+        ),
+    }
+
+    result = evaluate_report(report, UNKNOWN_INVOICE_CASE)
 
     assert result["checks"]["answer_outcome"]["passed"] is True
     assert result["passed"] is True

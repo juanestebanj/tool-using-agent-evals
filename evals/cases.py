@@ -91,7 +91,7 @@ UNKNOWN_INVOICE_CASE = EvalCase(
     ordered_tools=("check_payment",),
     answer_required_evidence=(
         ("INV-9999",),
-        ("not found", "couldn't find", "couldn’t find", "cannot find", "does not exist"),
+        ("not found", "couldn't find", "couldn’t find", "could not be found", "cannot find", "does not exist"),
     ),
 )
 
