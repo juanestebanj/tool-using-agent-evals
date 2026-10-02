@@ -37,7 +37,7 @@ def test_agent_instructions_require_grounded_tool_use():
 
 
 def test_agent_instructions_define_tool_responsibilities():
-    instructions = AGENT_INSTRUCTIONS.lower()
+    instructions = " ".join(AGENT_INSTRUCTIONS.lower().split())
 
     assert "narrowest tool" in instructions
     assert "get_customer for customer" in instructions
