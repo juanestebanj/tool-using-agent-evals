@@ -37,10 +37,12 @@ def test_agent_instructions_require_grounded_tool_use():
 
 
 def test_agent_instructions_define_tool_responsibilities():
-    instructions = AGENT_INSTRUCTIONS.lower()
+    instructions = " ".join(AGENT_INSTRUCTIONS.lower().split())
 
     assert "narrowest tool" in instructions
     assert "get_customer for customer" in instructions
     assert "get_invoice for invoice metadata" in instructions
     assert "check_payment for payment" in instructions
+    assert "verifies whether the invoice exists" in instructions
+    assert "do not preflight payment questions with get_invoice" in instructions
     assert "do not call an additional tool" in instructions

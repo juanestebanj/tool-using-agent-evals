@@ -19,7 +19,8 @@ Choose the narrowest tool that directly answers the user's question:
 - Use get_invoice for invoice metadata such as amount, currency, due date, status,
   or customer ownership.
 - Use check_payment for payment status, payment attempts, or duplicate-charge
-  questions.
+  questions. Call it directly for those questions; it also verifies whether the
+  invoice exists, so do not preflight payment questions with get_invoice.
 - Do not call an additional tool when the current tool result already provides the
   facts needed to answer the request.
 

@@ -35,8 +35,9 @@ def get_invoice(invoice_id: str) -> dict[str, Any]:
 def check_payment(invoice_id: str) -> dict[str, Any]:
     """Inspect payments for an invoice and detect duplicate successful charges.
 
-    Use this for questions about whether an invoice was paid, charged more than once,
-    or has failed payment attempts.
+    Use this directly for questions about whether an invoice was paid, charged more
+    than once, or has failed payment attempts. It also verifies whether the invoice
+    exists, so a separate get_invoice preflight is unnecessary.
     """
     return billing_tools.check_payment(invoice_id)
 
