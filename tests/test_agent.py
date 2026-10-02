@@ -43,4 +43,6 @@ def test_agent_instructions_define_tool_responsibilities():
     assert "get_customer for customer" in instructions
     assert "get_invoice for invoice metadata" in instructions
     assert "check_payment for payment" in instructions
+    assert "also verifies whether the invoice exists" in instructions
+    assert "do not preflight payment questions with get_invoice" in instructions
     assert "do not call an additional tool" in instructions
