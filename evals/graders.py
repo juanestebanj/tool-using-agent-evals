@@ -150,15 +150,34 @@ def evaluate_report(report: dict[str, Any], case: EvalCase) -> dict[str, Any]:
             trajectory, case.expected_arguments
         ),
         "tool_order": grade_tool_order(trajectory, case.ordered_tools),
-        "answer_outcome": grade_answer_outcome(
+        "answer_outcome_smoke": grade_answer_outcome(
             report.get("final_output"),
             case.answer_required_evidence,
             case.answer_forbidden_evidence,
         ),
     }
 
+    semantic_judgment = report.get("semantic_judgment")
+    if semantic_judgment is not None:
+        checks["semantic_outcome"] = semantic_judgment
+
+    gating_check_names = [
+        "required_tools",
+        "forbidden_tools",
+        "exact_arguments",
+        "tool_order",
+    ]
+
+    if semantic_judgment is not None:
+        gating_check_names.append("semantic_outcome")
+    else:
+        # Offline deterministic grading still has a useful fallback when no live
+        # semantic judge result is available.
+        gating_check_names.append("answer_outcome_smoke")
+
     return {
         "case_id": case.id,
-        "passed": all(check["passed"] for check in checks.values()),
+        "passed": all(checks[name]["passed"] for name in gating_check_names),
+        "gating_checks": gating_check_names,
         "checks": checks,
     }
