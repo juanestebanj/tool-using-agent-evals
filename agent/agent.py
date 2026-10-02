@@ -1,10 +1,13 @@
 """Billing-support agent with deterministic read-only billing tools."""
 
+import os
+
 from agents import Agent, Runner
 
 from agent.tool_adapters import AGENT_TOOLS
 
 AGENT_NAME = "Billing Support Agent"
+DEFAULT_AGENT_MODEL = "gpt-6-luna"
 AGENT_INSTRUCTIONS = """
 You are a customer billing support agent.
 
@@ -33,11 +36,13 @@ Be concise and factual.
 """.strip()
 
 
-def build_agent() -> Agent:
+def build_agent(model: str | None = None) -> Agent:
     """Create the tool-using billing support agent without executing a model call."""
+    agent_model = model or os.getenv("AGENT_MODEL", DEFAULT_AGENT_MODEL)
     return Agent(
         name=AGENT_NAME,
         instructions=AGENT_INSTRUCTIONS,
+        model=agent_model,
         tools=AGENT_TOOLS,
     )
 
