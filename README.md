@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 7 — Deterministic outcome grading**
+**Step 8 — Semantic outcome grading with LLM-as-judge**
 
-This milestone adds deterministic final-answer grading alongside trajectory grading. Each eval case declares narrow factual evidence that must appear in the answer, plus contradictions that must not appear, so a correct tool trajectory can still fail when the final answer misstates the result.
+This milestone adds a structured LLM-as-judge for semantic answer correctness while preserving deterministic trajectory grading. The judge evaluates whether the answer addresses the request, is grounded in captured tool evidence, avoids contradictions, and avoids unsupported billing claims.
 
 ## Why this project exists
 
@@ -56,7 +56,8 @@ agent/
 
 evals/
   cases.py            # Named eval cases and expected behavior
-  graders.py          # Deterministic trajectory graders
+  graders.py          # Deterministic trajectory + smoke outcome graders
+  semantic_grader.py  # Structured LLM-as-judge for semantic outcomes
   grade_report.py     # Offline CLI for grading captured reports
   run_case.py         # Live run + trajectory capture
   suite.py            # Deterministic multi-case aggregation
@@ -175,7 +176,13 @@ A reliable agent should behave correctly when the answer is positive, negative, 
 
 ### Prefer deterministic graders for exact properties
 
-Tool names, exact arguments, call ordering, and forbidden actions can be checked directly in code. These checks are cheaper, reproducible, and easier to debug than asking another LLM to judge them.
+Tool names, exact arguments, call ordering, and forbidden actions are checked directly in code. These checks are cheaper, reproducible, and easier to debug than asking another LLM to judge them.
+
+### Use an LLM judge only for semantic properties
+
+Natural-language correctness can depend on paraphrase, negation, implication, and whether a claim is actually supported by tool evidence. The live regression suite therefore uses a separate structured judge for semantic outcome correctness. Phrase matching remains a cheap diagnostic/smoke check, but when a semantic judgment is present it is not the gating authority for answer meaning.
+
+The judge model defaults to `gpt-6-luna` and can be overridden with `EVAL_JUDGE_MODEL`. Pinning the judge model is recommended when comparing regression runs so changes in the judge do not get confused with changes in the agent.
 
 ### Separate trajectory correctness from outcome correctness
 
@@ -193,7 +200,7 @@ Intermediate tool calls still matter because a correct-looking response can be p
 - [x] Tool-using agent workflow
 - [x] Evaluation dataset
 - [x] Tool-selection and argument graders
-- [x] Trajectory and deterministic outcome graders
+- [x] Trajectory, deterministic outcome, and semantic LLM-as-judge graders
 - [ ] Latency, token, and cost metrics
 - [x] Regression suite
 - [ ] Example evaluation report
