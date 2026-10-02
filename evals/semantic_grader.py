@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from collections.abc import Callable
 from typing import Any
 
 from typing_extensions import TypedDict
 
 from agents import Agent, Runner
+
+from evals.metrics import serialize_usage
 
 
 JUDGE_NAME = "Semantic Outcome Judge"
@@ -81,7 +84,10 @@ def judge_report(
     model: str | None = None,
 ) -> dict[str, Any]:
     """Run the semantic judge and deterministically aggregate its rubric dimensions."""
-    result = run_sync(build_semantic_judge(model=model), build_judge_input(report))
+    judge = build_semantic_judge(model=model)
+    started = time.perf_counter()
+    result = run_sync(judge, build_judge_input(report))
+    elapsed_seconds = time.perf_counter() - started
     judgment = result.final_output
 
     if not isinstance(judgment, dict):
@@ -107,4 +113,9 @@ def judge_report(
     return {
         **judgment,
         "passed": all(judgment[field] for field in dimensions),
+        "elapsed_seconds": round(elapsed_seconds, 3),
+        "usage_metrics": serialize_usage(
+            result.context_wrapper.usage,
+            model=str(judge.model),
+        ),
     }
