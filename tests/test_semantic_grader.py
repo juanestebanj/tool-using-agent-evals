@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from evals.semantic_grader import (
+    EVALUATED_AGENT_CAPABILITIES,
     JUDGE_INSTRUCTIONS,
     build_judge_input,
     build_semantic_judge,
@@ -61,6 +62,7 @@ def test_semantic_judge_has_no_tools_and_uses_structured_output():
     assert judge.tools == []
     assert judge.output_type is not str
     assert "Do not grade tool selection" in JUDGE_INSTRUCTIONS
+    assert "declared capabilities" in JUDGE_INSTRUCTIONS
 
 
 def test_build_judge_input_contains_prompt_trajectory_and_answer():
@@ -69,6 +71,9 @@ def test_build_judge_input_contains_prompt_trajectory_and_answer():
     assert "INV-2001" in text
     assert "check_payment" in text
     assert "one successful payment" in text
+    assert '"can_issue_refunds": false' in text
+    assert '"billing_tools_are_read_only": true' in text
+    assert EVALUATED_AGENT_CAPABILITIES["can_change_billing_state"] is False
 
 
 def test_judge_report_passes_when_all_rubric_dimensions_pass():

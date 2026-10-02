@@ -33,6 +33,7 @@ def test_agent_instructions_require_grounded_tool_use():
     assert "do not invent" in instructions
     assert "do not claim a duplicate charge unless" in instructions
     assert "read-only" in instructions
+    assert "do not invent external support channels" in instructions
 
 
 def test_agent_instructions_define_tool_responsibilities():

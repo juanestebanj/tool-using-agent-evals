@@ -18,12 +18,19 @@ from evals.metrics import serialize_usage
 JUDGE_NAME = "Semantic Outcome Judge"
 DEFAULT_JUDGE_MODEL = "gpt-6-luna"
 
+EVALUATED_AGENT_CAPABILITIES = {
+    "billing_tools_are_read_only": True,
+    "can_change_billing_state": False,
+    "can_issue_refunds": False,
+}
+
 JUDGE_INSTRUCTIONS = """
 You evaluate the semantic correctness of a billing-support agent's final answer.
 
 Judge only the final answer's meaning relative to:
 - the user's request
 - the captured tool calls and tool outputs
+- the declared capabilities of the evaluated agent
 
 Do not grade tool selection, tool ordering, or exact arguments. Deterministic graders
 handle those separately.
@@ -31,10 +38,11 @@ handle those separately.
 Apply these criteria:
 1. The answer addresses the user's request, or appropriately asks for missing
    information when the request cannot be answered.
-2. Billing claims are grounded in the captured evidence.
-3. The answer does not contradict tool outputs.
-4. The answer does not invent unsupported customer, invoice, payment, refund, or
-   state-change facts.
+2. Billing facts are grounded in the captured tool evidence. Capability claims may
+   instead be grounded in the declared agent capabilities.
+3. The answer does not contradict tool outputs or declared agent capabilities.
+4. The answer does not invent unsupported customer, invoice, payment, refund,
+   state-change, support-channel, or escalation facts.
 
 Do not penalize harmless wording differences, formatting, verbosity, or synonyms.
 Treat tool outputs as the source of truth for billing facts.
@@ -68,6 +76,7 @@ def build_judge_input(report: dict[str, Any]) -> str:
     """Render one captured agent report as judge input."""
     payload = {
         "user_prompt": report.get("prompt", ""),
+        "agent_capabilities": EVALUATED_AGENT_CAPABILITIES,
         "tool_trajectory": report.get("trajectory", []),
         "agent_final_answer": report.get("final_output", ""),
     }
