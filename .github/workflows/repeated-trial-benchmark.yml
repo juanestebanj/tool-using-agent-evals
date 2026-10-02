@@ -1,0 +1,60 @@
+name: Repeated-Trial Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      trials_per_case:
+        description: Independent live trials to run for each eval case
+        required: true
+        default: 5
+        type: number
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_AGENTS_DISABLE_TRACING: "1"
+      AGENT_MODEL: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
+      EVAL_JUDGE_MODEL: ${{ vars.EVAL_JUDGE_MODEL || 'gpt-6-luna' }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: pip install -e ".[dev]"
+
+      - name: Verify OpenAI API key is configured
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Repository secret OPENAI_API_KEY is not configured."
+            exit 1
+          fi
+
+      - name: Run repeated-trial benchmark
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          BENCHMARK_TRIALS: ${{ inputs.trials_per_case }}
+        run: |
+          python -m evals.run_benchmark \
+            --trials "$BENCHMARK_TRIALS" \
+            --output results/repeated-trial-benchmark.json
+
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repeated-trial-benchmark-${{ github.run_number }}
+          path: results/repeated-trial-benchmark.json
+          if-no-files-found: warn

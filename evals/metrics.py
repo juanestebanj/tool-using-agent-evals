@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from math import ceil, floor
+from statistics import mean
 from typing import Any
 
 
@@ -128,4 +130,168 @@ def aggregate_run_metrics(case_reports: list[dict[str, Any]]) -> dict[str, Any]:
         if priced_components
         else None,
         "pricing_as_of": PRICING_AS_OF,
+    }
+
+
+
+def summarize_distribution(values: list[float]) -> dict[str, float | int | None]:
+    """Summarize one numeric distribution with mean, p50, and p95.
+
+    Percentiles use linear interpolation between neighboring observations. Small
+    sample sizes remain descriptive rather than statistically strong tail estimates.
+    """
+    if not values:
+        return {
+            "sample_count": 0,
+            "mean": None,
+            "p50": None,
+            "p95": None,
+        }
+
+    ordered = sorted(float(value) for value in values)
+
+    def percentile(percent: float) -> float:
+        if len(ordered) == 1:
+            return ordered[0]
+
+        rank = (len(ordered) - 1) * percent
+        lower = floor(rank)
+        upper = ceil(rank)
+        if lower == upper:
+            return ordered[lower]
+
+        weight = rank - lower
+        return ordered[lower] + (ordered[upper] - ordered[lower]) * weight
+
+    return {
+        "sample_count": len(ordered),
+        "mean": round(mean(ordered), 6),
+        "p50": round(percentile(0.50), 6),
+        "p95": round(percentile(0.95), 6),
+    }
+
+
+def aggregate_benchmark_metrics(
+    trial_results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Aggregate repeated trials while separating agent and evaluator economics."""
+    passed_count = sum(1 for trial in trial_results if trial.get("passed") is True)
+
+    agent_latencies: list[float] = []
+    judge_latencies: list[float] = []
+    agent_costs: list[float] = []
+    judge_costs: list[float] = []
+    agent_requests = 0
+    judge_requests = 0
+    agent_total_tokens = 0
+    judge_total_tokens = 0
+    agent_usage_samples = 0
+    judge_usage_samples = 0
+    agent_unpriced_samples = 0
+    judge_unpriced_samples = 0
+
+    for trial in trial_results:
+        report = trial.get("report")
+        if not isinstance(report, dict):
+            continue
+
+        elapsed = report.get("elapsed_seconds")
+        if isinstance(elapsed, (int, float)):
+            agent_latencies.append(float(elapsed))
+
+        agent_metrics = report.get("usage_metrics")
+        if isinstance(agent_metrics, dict):
+            agent_usage_samples += 1
+            agent_requests += int(agent_metrics.get("requests", 0) or 0)
+            agent_total_tokens += int(agent_metrics.get("total_tokens", 0) or 0)
+            cost = agent_metrics.get("estimated_cost_usd")
+            if isinstance(cost, (int, float)):
+                agent_costs.append(float(cost))
+            else:
+                agent_unpriced_samples += 1
+
+        semantic = report.get("semantic_judgment")
+        if not isinstance(semantic, dict):
+            continue
+
+        judge_elapsed = semantic.get("elapsed_seconds")
+        if isinstance(judge_elapsed, (int, float)):
+            judge_latencies.append(float(judge_elapsed))
+
+        judge_metrics = semantic.get("usage_metrics")
+        if isinstance(judge_metrics, dict):
+            judge_usage_samples += 1
+            judge_requests += int(judge_metrics.get("requests", 0) or 0)
+            judge_total_tokens += int(judge_metrics.get("total_tokens", 0) or 0)
+            cost = judge_metrics.get("estimated_cost_usd")
+            if isinstance(cost, (int, float)):
+                judge_costs.append(float(cost))
+            else:
+                judge_unpriced_samples += 1
+
+    agent_fully_priced = agent_usage_samples > 0 and agent_unpriced_samples == 0
+    judge_fully_priced = judge_usage_samples > 0 and judge_unpriced_samples == 0
+
+    agent_total_cost = round(sum(agent_costs), 8) if agent_fully_priced else None
+    judge_total_cost = round(sum(judge_costs), 8) if judge_fully_priced else None
+
+    total_eval_cost = (
+        round(agent_total_cost + judge_total_cost, 8)
+        if agent_total_cost is not None and judge_total_cost is not None
+        else None
+    )
+
+    return {
+        "agent": {
+            "latency_seconds": summarize_distribution(agent_latencies),
+            "requests": agent_requests,
+            "usage_sample_count": agent_usage_samples,
+            "total_tokens": agent_total_tokens,
+            "mean_tokens_per_measured_trial": round(
+                agent_total_tokens / agent_usage_samples, 3
+            )
+            if agent_usage_samples
+            else None,
+            "estimated_cost_usd": {
+                "total": agent_total_cost,
+                "mean_per_measured_trial": round(
+                    agent_total_cost / agent_usage_samples, 8
+                )
+                if agent_total_cost is not None and agent_usage_samples
+                else None,
+                "per_successful_trial": round(
+                    agent_total_cost / passed_count, 8
+                )
+                if agent_total_cost is not None and passed_count
+                else None,
+                "fully_priced": agent_fully_priced,
+            },
+        },
+        "judge": {
+            "latency_seconds": summarize_distribution(judge_latencies),
+            "requests": judge_requests,
+            "usage_sample_count": judge_usage_samples,
+            "total_tokens": judge_total_tokens,
+            "mean_tokens_per_measured_trial": round(
+                judge_total_tokens / judge_usage_samples, 3
+            )
+            if judge_usage_samples
+            else None,
+            "estimated_cost_usd": {
+                "total": judge_total_cost,
+                "mean_per_measured_trial": round(
+                    judge_total_cost / judge_usage_samples, 8
+                )
+                if judge_total_cost is not None and judge_usage_samples
+                else None,
+                "fully_priced": judge_fully_priced,
+            },
+        },
+        "evaluation": {
+            "combined_measured_latency_seconds": round(
+                sum(agent_latencies) + sum(judge_latencies), 3
+            ),
+            "estimated_total_cost_usd": total_eval_cost,
+            "pricing_as_of": PRICING_AS_OF,
+        },
     }

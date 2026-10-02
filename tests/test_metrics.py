@@ -2,9 +2,11 @@ from types import SimpleNamespace
 
 from evals.metrics import (
     PRICING_AS_OF,
+    aggregate_benchmark_metrics,
     aggregate_run_metrics,
     estimate_text_cost_usd,
     serialize_usage,
+    summarize_distribution,
 )
 
 
@@ -118,3 +120,73 @@ def test_aggregate_run_metrics_combines_agent_and_judge_metrics():
     assert result["output_tokens"] == 53
     assert result["total_tokens"] == 323
     assert result["estimated_cost_usd"] == 0.0027
+
+
+
+def test_summarize_distribution_reports_mean_p50_and_p95():
+    result = summarize_distribution([1.0, 2.0, 3.0, 4.0, 5.0])
+
+    assert result == {
+        "sample_count": 5,
+        "mean": 3.0,
+        "p50": 3.0,
+        "p95": 4.8,
+    }
+
+
+def test_benchmark_metrics_separate_agent_and_judge_costs():
+    trials = [
+        {
+            "passed": True,
+            "report": {
+                "elapsed_seconds": 2.0,
+                "usage_metrics": {
+                    "requests": 2,
+                    "total_tokens": 100,
+                    "estimated_cost_usd": 0.001,
+                },
+                "semantic_judgment": {
+                    "elapsed_seconds": 0.5,
+                    "usage_metrics": {
+                        "requests": 1,
+                        "total_tokens": 50,
+                        "estimated_cost_usd": 0.0004,
+                    },
+                },
+            },
+        },
+        {
+            "passed": False,
+            "report": {
+                "elapsed_seconds": 4.0,
+                "usage_metrics": {
+                    "requests": 2,
+                    "total_tokens": 140,
+                    "estimated_cost_usd": 0.0014,
+                },
+                "semantic_judgment": {
+                    "elapsed_seconds": 1.0,
+                    "usage_metrics": {
+                        "requests": 1,
+                        "total_tokens": 70,
+                        "estimated_cost_usd": 0.0006,
+                    },
+                },
+            },
+        },
+    ]
+
+    result = aggregate_benchmark_metrics(trials)
+
+    assert result["agent"]["latency_seconds"]["mean"] == 3.0
+    assert result["agent"]["latency_seconds"]["p50"] == 3.0
+    assert result["agent"]["latency_seconds"]["p95"] == 3.9
+    assert result["agent"]["total_tokens"] == 240
+    assert result["agent"]["mean_tokens_per_measured_trial"] == 120.0
+    assert result["agent"]["estimated_cost_usd"]["total"] == 0.0024
+    assert result["agent"]["estimated_cost_usd"]["mean_per_measured_trial"] == 0.0012
+    assert result["agent"]["estimated_cost_usd"]["per_successful_trial"] == 0.0024
+
+    assert result["judge"]["latency_seconds"]["mean"] == 0.75
+    assert result["judge"]["estimated_cost_usd"]["total"] == 0.001
+    assert result["evaluation"]["estimated_total_cost_usd"] == 0.0034
