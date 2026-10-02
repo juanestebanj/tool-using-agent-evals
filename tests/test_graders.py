@@ -152,7 +152,7 @@ def test_correct_trajectory_can_fail_when_final_answer_is_wrong():
 
     assert result["checks"]["required_tools"]["passed"] is True
     assert result["checks"]["exact_arguments"]["passed"] is True
-    assert result["checks"]["answer_outcome"]["passed"] is False
+    assert result["checks"]["answer_outcome_smoke"]["passed"] is False
     assert result["passed"] is False
 
 
@@ -169,7 +169,7 @@ def test_single_charge_case_accepts_negated_duplicate_phrase():
 
     result = evaluate_report(report, SINGLE_CHARGE_CASE)
 
-    assert result["checks"]["answer_outcome"]["passed"] is True
+    assert result["checks"]["answer_outcome_smoke"]["passed"] is True
     assert result["passed"] is True
 
 
@@ -186,5 +186,5 @@ def test_unknown_invoice_case_accepts_could_not_be_found_phrasing():
 
     result = evaluate_report(report, UNKNOWN_INVOICE_CASE)
 
-    assert result["checks"]["answer_outcome"]["passed"] is True
+    assert result["checks"]["answer_outcome_smoke"]["passed"] is True
     assert result["passed"] is True

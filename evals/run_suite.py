@@ -9,6 +9,7 @@ from typing import Any
 
 from evals.cases import CASES
 from evals.run_case import run_case
+from evals.semantic_grader import judge_report
 from evals.suite import evaluate_suite
 
 
@@ -19,7 +20,18 @@ def run_live_suite() -> dict[str, Any]:
     for case_id, case in CASES.items():
         print(f"Running {case_id}: {case.prompt}", flush=True)
         try:
-            reports[case_id] = run_case(case.prompt)
+            report = run_case(case.prompt)
+            try:
+                report["semantic_judgment"] = judge_report(report)
+            except Exception as exc:
+                report["semantic_judgment"] = {
+                    "passed": False,
+                    "error": {
+                        "type": type(exc).__name__,
+                        "message": str(exc),
+                    },
+                }
+            reports[case_id] = report
         except Exception as exc:
             reports[case_id] = {
                 "prompt": case.prompt,
