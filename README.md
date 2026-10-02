@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 9 — Latency, token usage, and estimated cost metrics**
+**Step 10 — Repeated-trial reliability benchmarking**
 
-This milestone instruments both the evaluated agent and the semantic judge. Every live report now records latency, request count, input/output/cached/reasoning tokens, and an estimated USD cost; suite reports aggregate those measurements across all cases.
+This milestone adds configurable repeated trials for every eval case. The benchmark reports empirical pass rate, mean/p50/p95 latency, mean tokens per measured trial, mean agent cost per trial, cost per successful trial, and separate semantic-judge overhead. The existing one-shot live regression suite remains available for cheaper checks.
 
 ## Why this project exists
 
@@ -58,11 +58,13 @@ evals/
   cases.py            # Named eval cases and expected behavior
   graders.py          # Deterministic trajectory + smoke outcome graders
   semantic_grader.py  # Structured LLM-as-judge for semantic outcomes
-  metrics.py          # Runtime, usage, and estimated-cost instrumentation
+  metrics.py          # Runtime, usage, cost, and distribution instrumentation
+  benchmark.py        # Deterministic repeated-trial aggregation
   grade_report.py     # Offline CLI for grading captured reports
   run_case.py         # Live run + trajectory capture
   suite.py            # Deterministic multi-case aggregation
   run_suite.py        # Live regression-suite runner
+  run_benchmark.py    # Configurable repeated live benchmark runner
 
 tests/
   test_agent.py       # Deterministic foundation tests
@@ -70,11 +72,13 @@ tests/
   test_run_case.py    # Deterministic trajectory-serialization tests
   test_graders.py     # Deterministic grader tests
   test_suite.py       # Regression-suite aggregation tests
+  test_benchmark.py   # Repeated-trial benchmark tests
 
 .github/workflows/
   tests.yml           # Deterministic CI workflow
   live-agent.yml      # Manually triggered live agent workflow
-  live-regression.yml # Manually triggered multi-case regression suite
+  live-regression.yml # Manually triggered one-shot regression suite
+  repeated-trial-benchmark.yml # Configurable repeated-trial benchmark
 ```
 
 Normal CI remains model-free and deterministic. Live runs are isolated behind a manually triggered workflow so API cost and model variability do not affect every pull request.
@@ -143,6 +147,14 @@ python -m evals.run_suite --output results/regression-suite.json
 
 The current suite covers duplicate charge, single charge, failed payment, missing invoice ID, unknown invoice, invoice due-date lookup, and customer-status lookup. On GitHub, use **Actions → Live Regression Suite → Run workflow**.
 
+For a reliability-oriented benchmark, run multiple independent trials per case:
+
+```bash
+python -m evals.run_benchmark --trials 5 --output results/repeated-trial-benchmark.json
+```
+
+On GitHub, use **Actions → Repeated-Trial Benchmark → Run workflow** and choose the number of trials per case. Five trials is a practical low-cost starting point for detecting inconsistency. Tail metrics such as p95 become more credible with larger samples; use 20+ trials per case when latency-tail analysis matters enough to justify the additional API cost.
+
 On GitHub, use **Actions → Live Agent Run → Run workflow** after configuring the repository secret `OPENAI_API_KEY`. Hosted Agents SDK tracing is disabled for this workflow, and the report is uploaded as a workflow artifact rather than committed to the repository.
 
 ## Design decisions
@@ -191,6 +203,14 @@ The Agents SDK already exposes aggregated usage for each run. The framework capt
 
 Cost is explicitly an estimate rather than a billing record. The pricing table is isolated in `evals/metrics.py`, includes an `as-of` date, and currently covers Standard short-context `gpt-6-luna` text pricing. Unknown models retain token metrics but return no estimated price.
 
+### Repeat probabilistic tasks before drawing reliability conclusions
+
+A one-shot regression run answers whether each case passed once. It does not estimate how consistently a probabilistic agent behaves. The repeated-trial benchmark therefore runs each fixed case multiple times and reports empirical pass rate plus latency distributions.
+
+Agent and evaluator economics remain separate. Agent cost represents production-like serving cost; judge cost is evaluation overhead. The benchmark reports mean agent cost per measured trial and agent cost per successful trial, while total benchmark cost includes both agent and judge calls.
+
+Mean latency is retained for context, but p50 and p95 are reported because averages can hide slow-tail behavior. Percentiles from very small samples are descriptive only rather than strong tail estimates.
+
 ### Separate trajectory correctness from outcome correctness
 
 A correct trajectory does not guarantee a correct final answer. The framework now grades both. Deterministic outcome checks use small groups of acceptable factual phrases rather than exact full-string matching, so wording can vary while essential facts remain testable.
@@ -210,6 +230,7 @@ Intermediate tool calls still matter because a correct-looking response can be p
 - [x] Trajectory, deterministic outcome, and semantic LLM-as-judge graders
 - [x] Latency, token, and cost metrics
 - [x] Regression suite
+- [x] Repeated-trial reliability benchmark
 - [ ] Example evaluation report
 
 ## License
