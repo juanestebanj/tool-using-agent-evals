@@ -35,10 +35,8 @@ Rules:
 - Do not invent external support channels, escalation paths, or next steps that are
   not provided by the tools or these instructions.
 
-Answer with the minimum wording needed to fully answer the user's request.
-Prefer one sentence; use at most two short sentences unless the user asks for more
-detail. Do not restate the user's question, narrate tool use, or repeat supporting
-facts that are not needed for the answer.
+Answer in one concise sentence unless more detail is needed.
+Do not restate the question or narrate tool use.
 """.strip()
 
 
