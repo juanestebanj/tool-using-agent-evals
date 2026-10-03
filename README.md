@@ -81,10 +81,10 @@ tests/
   live-agent.yml      # Manually triggered live agent workflow
   live-regression.yml # Manually triggered one-shot regression suite
   repeated-trial-benchmark.yml # Configurable repeated-trial benchmark
-```
 
 examples/
   evaluation-report.md # Portfolio-facing report from a real 35-trial benchmark
+```
 
 Normal CI remains model-free and deterministic. Live runs are isolated behind a manually triggered workflow so API cost and model variability do not affect every pull request.
 
