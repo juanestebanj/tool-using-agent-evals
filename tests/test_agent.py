@@ -56,4 +56,4 @@ def test_agent_instructions_define_concise_response_policy():
     assert "prefer one sentence" in instructions
     assert "at most two short sentences" in instructions
     assert "do not restate the user's question" in instructions
-    assert "do not repeat supporting facts" in instructions
+    assert "repeat supporting facts that are not needed" in instructions
