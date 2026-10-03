@@ -52,8 +52,7 @@ def test_agent_instructions_define_tool_responsibilities():
 def test_agent_instructions_define_concise_response_policy():
     instructions = " ".join(AGENT_INSTRUCTIONS.lower().split())
 
-    assert "minimum wording needed" in instructions
-    assert "prefer one sentence" in instructions
-    assert "at most two short sentences" in instructions
-    assert "do not restate the user's question" in instructions
-    assert "repeat supporting facts that are not needed" in instructions
+    assert "one concise sentence" in instructions
+    assert "unless more detail is needed" in instructions
+    assert "do not restate the question" in instructions
+    assert "do not" in instructions and "narrate tool use" in instructions
