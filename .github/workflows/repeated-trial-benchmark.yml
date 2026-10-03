@@ -51,10 +51,26 @@ jobs:
             --trials "$BENCHMARK_TRIALS" \
             --output results/repeated-trial-benchmark.json
 
-      - name: Upload benchmark report
+      - name: Render human-readable evaluation report
+        if: always()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -f results/repeated-trial-benchmark.json ]; then
+            python -m evals.render_report \
+              --input results/repeated-trial-benchmark.json \
+              --output results/evaluation-report.md \
+              --source-label "Repeated-Trial Benchmark #${{ github.run_number }}" \
+              --source-url "$RUN_URL" \
+              --commit-sha "${{ github.sha }}"
+          else
+            echo "Benchmark JSON was not produced; skipping Markdown rendering."
+          fi
+
+      - name: Upload benchmark reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: repeated-trial-benchmark-${{ github.run_number }}
-          path: results/repeated-trial-benchmark.json
+          path: results/
           if-no-files-found: warn
