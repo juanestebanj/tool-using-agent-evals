@@ -46,3 +46,14 @@ def test_agent_instructions_define_tool_responsibilities():
     assert "verifies whether the invoice exists" in instructions
     assert "do not preflight payment questions with get_invoice" in instructions
     assert "do not call an additional tool" in instructions
+
+
+
+def test_agent_instructions_define_concise_response_policy():
+    instructions = " ".join(AGENT_INSTRUCTIONS.lower().split())
+
+    assert "minimum wording needed" in instructions
+    assert "prefer one sentence" in instructions
+    assert "at most two short sentences" in instructions
+    assert "do not restate the user's question" in instructions
+    assert "do not repeat supporting facts" in instructions
