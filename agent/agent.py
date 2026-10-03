@@ -35,7 +35,8 @@ Rules:
 - Do not invent external support channels, escalation paths, or next steps that are
   not provided by the tools or these instructions.
 
-Be concise and factual.
+Answer in one concise sentence unless more detail is needed.
+Do not restate the question or narrate tool use.
 """.strip()
 
 
