@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 10 — Repeated-trial reliability benchmarking**
+**Step 11 — Human-readable evaluation reports**
 
-This milestone adds configurable repeated trials for every eval case. The benchmark reports empirical pass rate, mean/p50/p95 latency, mean tokens per measured trial, mean agent cost per trial, cost per successful trial, and separate semantic-judge overhead. The existing one-shot live regression suite remains available for cheaper checks.
+This milestone turns the machine-readable repeated-trial benchmark artifact into a deterministic Markdown report for technical review. The report summarizes observed pass rate, per-case reliability, mean/p50/p95 agent latency, token usage, agent economics, semantic-judge overhead, failed-trial diagnostics, and statistical caveats. A real 35-trial report is committed under `examples/`.
 
 ## Why this project exists
 
@@ -65,6 +65,7 @@ evals/
   suite.py            # Deterministic multi-case aggregation
   run_suite.py        # Live regression-suite runner
   run_benchmark.py    # Configurable repeated live benchmark runner
+  render_report.py    # Deterministic JSON-to-Markdown report renderer
 
 tests/
   test_agent.py       # Deterministic foundation tests
@@ -73,12 +74,16 @@ tests/
   test_graders.py     # Deterministic grader tests
   test_suite.py       # Regression-suite aggregation tests
   test_benchmark.py   # Repeated-trial benchmark tests
+  test_render_report.py # Human-readable report renderer tests
 
 .github/workflows/
   tests.yml           # Deterministic CI workflow
   live-agent.yml      # Manually triggered live agent workflow
   live-regression.yml # Manually triggered one-shot regression suite
   repeated-trial-benchmark.yml # Configurable repeated-trial benchmark
+
+examples/
+  evaluation-report.md # Portfolio-facing report from a real 35-trial benchmark
 ```
 
 Normal CI remains model-free and deterministic. Live runs are isolated behind a manually triggered workflow so API cost and model variability do not affect every pull request.
@@ -155,6 +160,16 @@ python -m evals.run_benchmark --trials 5 --output results/repeated-trial-benchma
 
 On GitHub, use **Actions → Repeated-Trial Benchmark → Run workflow** and choose the number of trials per case. Five trials is a practical low-cost starting point for detecting inconsistency. Tail metrics such as p95 become more credible with larger samples; use 20+ trials per case when latency-tail analysis matters enough to justify the additional API cost.
 
+The workflow writes both the raw JSON benchmark and a human-readable Markdown report. You can also render an existing benchmark locally:
+
+```bash
+python -m evals.render_report \
+  --input results/repeated-trial-benchmark.json \
+  --output results/evaluation-report.md
+```
+
+See [`examples/evaluation-report.md`](examples/evaluation-report.md) for a real 35-trial report generated from Repeated-Trial Benchmark #1.
+
 On GitHub, use **Actions → Live Agent Run → Run workflow** after configuring the repository secret `OPENAI_API_KEY`. Hosted Agents SDK tracing is disabled for this workflow, and the report is uploaded as a workflow artifact rather than committed to the repository.
 
 ## Design decisions
@@ -211,6 +226,12 @@ Agent and evaluator economics remain separate. Agent cost represents production-
 
 Mean latency is retained for context, but p50 and p95 are reported because averages can hide slow-tail behavior. Percentiles from very small samples are descriptive only rather than strong tail estimates.
 
+### Keep machine evidence separate from human presentation
+
+The benchmark JSON remains the source-of-truth artifact. Markdown is a deterministic projection for reviewers rather than a second evaluation system. This keeps presentation changes from altering grading results, while making quality, latency, cost, and failures understandable without inspecting raw JSON.
+
+The renderer also surfaces failed gating checks and tool trajectories when a trial fails. When every trial passes, it says so explicitly instead of hiding an empty failure section.
+
 ### Separate trajectory correctness from outcome correctness
 
 A correct trajectory does not guarantee a correct final answer. The framework now grades both. Deterministic outcome checks use small groups of acceptable factual phrases rather than exact full-string matching, so wording can vary while essential facts remain testable.
@@ -231,7 +252,8 @@ Intermediate tool calls still matter because a correct-looking response can be p
 - [x] Latency, token, and cost metrics
 - [x] Regression suite
 - [x] Repeated-trial reliability benchmark
-- [ ] Example evaluation report
+- [x] Example evaluation report
+- [ ] Baseline-vs-candidate comparison
 
 ## License
 
