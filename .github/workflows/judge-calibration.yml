@@ -1,0 +1,52 @@
+name: Semantic Judge Calibration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_AGENTS_DISABLE_TRACING: "1"
+      EVAL_JUDGE_MODEL: ${{ vars.EVAL_JUDGE_MODEL || 'gpt-6-luna' }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: pip install -e ".[dev]"
+
+      - name: Verify OpenAI API key is configured
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Repository secret OPENAI_API_KEY is not configured."
+            exit 1
+          fi
+
+      - name: Run semantic judge calibration
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python -m evals.run_judge_calibration \
+            --output results/judge-calibration.json \
+            --markdown-output results/judge-calibration.md
+
+      - name: Upload calibration reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-judge-calibration-${{ github.run_number }}
+          path: results/
+          if-no-files-found: warn

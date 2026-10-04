@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 12 — Baseline-vs-candidate comparison**
+**Step 13 — Semantic-judge calibration**
 
-This milestone compares two repeated-trial benchmark artifacts deterministically. It reports changes in observed pass rate, per-case reliability, mean/p50/p95 latency, input/output/total tokens, serving cost, cost per successful trial, judge overhead, and total evaluation cost. It also identifies per-case regressions and improvements without automatically declaring a universal winner.
+This milestone tests the LLM semantic judge against a committed, independently human-labeled calibration set. The calibration report measures pass/fail accuracy, false positives, false negatives, exact four-dimension rubric agreement, per-dimension agreement, and judge execution cost. Label disagreements are diagnostic evidence rather than automatic workflow failures.
 
 ## Why this project exists
 
@@ -67,6 +67,9 @@ evals/
   run_benchmark.py    # Configurable repeated live benchmark runner
   render_report.py    # Deterministic JSON-to-Markdown report renderer
   compare_reports.py   # Deterministic baseline-vs-candidate comparison
+  judge_calibration_cases.py # Independent human-labeled judge cases
+  judge_calibration.py # Agreement/confusion-matrix calibration metrics
+  run_judge_calibration.py # Live calibration runner
 
 tests/
   test_agent.py       # Deterministic foundation tests
@@ -77,12 +80,14 @@ tests/
   test_benchmark.py   # Repeated-trial benchmark tests
   test_render_report.py # Human-readable report renderer tests
   test_compare_reports.py # Baseline-vs-candidate comparison tests
+  test_judge_calibration.py # Human-label calibration tests
 
 .github/workflows/
   tests.yml           # Deterministic CI workflow
   live-agent.yml      # Manually triggered live agent workflow
   live-regression.yml # Manually triggered one-shot regression suite
   repeated-trial-benchmark.yml # Configurable repeated-trial benchmark
+  judge-calibration.yml # Manually triggered semantic-judge calibration
 
 examples/
   evaluation-report.md       # Portfolio-facing report from a real 35-trial benchmark
@@ -187,6 +192,18 @@ python -m evals.compare_reports \
 
 The comparison JSON is suitable for automation; the Markdown projection is for technical review. See [`examples/baseline-vs-candidate.md`](examples/baseline-vs-candidate.md) for the real baseline-versus-concise-policy experiment.
 
+Calibrate the semantic judge against the committed human labels:
+
+```bash
+python -m evals.run_judge_calibration \
+  --output results/judge-calibration.json \
+  --markdown-output results/judge-calibration.md
+```
+
+On GitHub, use **Actions → Semantic Judge Calibration → Run workflow**. The calibration set currently contains 16 deliberately balanced cases: eight human-labeled passes and eight failures covering correct paraphrases, missing identifiers, capability limitations, contradictions, unsupported refunds, invented support channels, irrelevant-but-grounded answers, guessed identifiers, fabricated dates, and invented escalation.
+
+A calibration workflow succeeds when all judge calls execute successfully. A disagreement with a human label does **not** make the workflow red; disagreement is the measurement we are trying to observe.
+
 On GitHub, use **Actions → Live Agent Run → Run workflow** after configuring the repository secret `OPENAI_API_KEY`. Hosted Agents SDK tracing is disabled for this workflow, and the report is uploaded as a workflow artifact rather than committed to the repository.
 
 ## Design decisions
@@ -255,6 +272,14 @@ A candidate can improve latency or cost while degrading reliability, so comparis
 
 The comparator also derives mean input and output tokens from the raw trial reports rather than only comparing aggregate total tokens. That makes prompt-overhead tradeoffs visible—for example, when shorter model answers are offset by a longer system instruction.
 
+### Calibrate the judge before trusting it as a gate
+
+An LLM judge is itself a probabilistic model and can make systematic mistakes. The repository therefore keeps a human-labeled calibration set that is authored independently of judge outputs. Calibration measures overall pass/fail agreement, false positives, false negatives, and agreement on each semantic rubric dimension.
+
+False positives deserve special attention because they mean the evaluator accepted an answer that the human label considered invalid. For a gating evaluator, that can hide real agent regressions. Calibration disagreements should be inspected case by case rather than fixed by blindly tuning the judge prompt to the calibration set.
+
+The workflow does not encode a universal accuracy threshold. Thresholds and acceptance policy should be chosen separately based on the risk of the application, dataset size, and the consequences of false positives versus false negatives.
+
 ### Separate trajectory correctness from outcome correctness
 
 A correct trajectory does not guarantee a correct final answer. The framework now grades both. Deterministic outcome checks use small groups of acceptable factual phrases rather than exact full-string matching, so wording can vary while essential facts remain testable.
@@ -278,6 +303,7 @@ Intermediate tool calls still matter because a correct-looking response can be p
 - [x] Example evaluation report
 - [x] Baseline-vs-candidate comparison
 - [ ] Semantic-judge calibration against human labels
+- [ ] Stronger statistical reliability analysis
 
 ## License
 
