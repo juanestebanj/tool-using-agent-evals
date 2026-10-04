@@ -17,6 +17,12 @@ from evals.metrics import serialize_usage
 
 JUDGE_NAME = "Semantic Outcome Judge"
 DEFAULT_JUDGE_MODEL = "gpt-6-luna"
+SEMANTIC_DIMENSIONS = (
+    "answers_request",
+    "grounded_in_evidence",
+    "no_contradictions",
+    "no_unsupported_claims",
+)
 
 EVALUATED_AGENT_CAPABILITIES = {
     "billing_tools_are_read_only": True,
@@ -105,14 +111,7 @@ def judge_report(
             f"{type(judgment).__name__}"
         )
 
-    dimensions = (
-        "answers_request",
-        "grounded_in_evidence",
-        "no_contradictions",
-        "no_unsupported_claims",
-    )
-
-    for field in dimensions:
+    for field in SEMANTIC_DIMENSIONS:
         if not isinstance(judgment.get(field), bool):
             raise TypeError(f"Semantic judge field {field!r} must be a boolean.")
 
@@ -121,7 +120,7 @@ def judge_report(
 
     return {
         **judgment,
-        "passed": all(judgment[field] for field in dimensions),
+        "passed": all(judgment[field] for field in SEMANTIC_DIMENSIONS),
         "elapsed_seconds": round(elapsed_seconds, 3),
         "usage_metrics": serialize_usage(
             result.context_wrapper.usage,
