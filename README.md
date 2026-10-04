@@ -6,9 +6,9 @@ A production-style evaluation project for AI agents that call tools. The project
 
 ## Current milestone
 
-**Step 11 — Human-readable evaluation reports**
+**Step 12 — Baseline-vs-candidate comparison**
 
-This milestone turns the machine-readable repeated-trial benchmark artifact into a deterministic Markdown report for technical review. The report summarizes observed pass rate, per-case reliability, mean/p50/p95 agent latency, token usage, agent economics, semantic-judge overhead, failed-trial diagnostics, and statistical caveats. A real 35-trial report is committed under `examples/`.
+This milestone compares two repeated-trial benchmark artifacts deterministically. It reports changes in observed pass rate, per-case reliability, mean/p50/p95 latency, input/output/total tokens, serving cost, cost per successful trial, judge overhead, and total evaluation cost. It also identifies per-case regressions and improvements without automatically declaring a universal winner.
 
 ## Why this project exists
 
@@ -66,6 +66,7 @@ evals/
   run_suite.py        # Live regression-suite runner
   run_benchmark.py    # Configurable repeated live benchmark runner
   render_report.py    # Deterministic JSON-to-Markdown report renderer
+  compare_reports.py   # Deterministic baseline-vs-candidate comparison
 
 tests/
   test_agent.py       # Deterministic foundation tests
@@ -75,6 +76,7 @@ tests/
   test_suite.py       # Regression-suite aggregation tests
   test_benchmark.py   # Repeated-trial benchmark tests
   test_render_report.py # Human-readable report renderer tests
+  test_compare_reports.py # Baseline-vs-candidate comparison tests
 
 .github/workflows/
   tests.yml           # Deterministic CI workflow
@@ -83,7 +85,8 @@ tests/
   repeated-trial-benchmark.yml # Configurable repeated-trial benchmark
 
 examples/
-  evaluation-report.md # Portfolio-facing report from a real 35-trial benchmark
+  evaluation-report.md       # Portfolio-facing report from a real 35-trial benchmark
+  baseline-vs-candidate.md   # Real controlled prompt-optimization comparison
 ```
 
 Normal CI remains model-free and deterministic. Live runs are isolated behind a manually triggered workflow so API cost and model variability do not affect every pull request.
@@ -170,6 +173,20 @@ python -m evals.render_report \
 
 See [`examples/evaluation-report.md`](examples/evaluation-report.md) for a real 35-trial report generated from Repeated-Trial Benchmark #1.
 
+Compare two benchmark artifacts locally:
+
+```bash
+python -m evals.compare_reports \
+  --baseline results/baseline.json \
+  --candidate results/candidate.json \
+  --json-output results/benchmark-comparison.json \
+  --markdown-output results/benchmark-comparison.md \
+  --baseline-label "Baseline" \
+  --candidate-label "Candidate"
+```
+
+The comparison JSON is suitable for automation; the Markdown projection is for technical review. See [`examples/baseline-vs-candidate.md`](examples/baseline-vs-candidate.md) for the real baseline-versus-concise-policy experiment.
+
 On GitHub, use **Actions → Live Agent Run → Run workflow** after configuring the repository secret `OPENAI_API_KEY`. Hosted Agents SDK tracing is disabled for this workflow, and the report is uploaded as a workflow artifact rather than committed to the repository.
 
 ## Design decisions
@@ -232,6 +249,12 @@ The benchmark JSON remains the source-of-truth artifact. Markdown is a determini
 
 The renderer also surfaces failed gating checks and tool trajectories when a trial fails. When every trial passes, it says so explicitly instead of hiding an empty failure section.
 
+### Compare candidates without hiding tradeoffs
+
+A candidate can improve latency or cost while degrading reliability, so comparison is intentionally multi-dimensional. The comparison utility calculates deltas and identifies per-case regressions or improvements, but it does not encode a universal winner. Acceptance policy stays separate so teams can choose explicit quality, latency, and cost thresholds.
+
+The comparator also derives mean input and output tokens from the raw trial reports rather than only comparing aggregate total tokens. That makes prompt-overhead tradeoffs visible—for example, when shorter model answers are offset by a longer system instruction.
+
 ### Separate trajectory correctness from outcome correctness
 
 A correct trajectory does not guarantee a correct final answer. The framework now grades both. Deterministic outcome checks use small groups of acceptable factual phrases rather than exact full-string matching, so wording can vary while essential facts remain testable.
@@ -253,7 +276,8 @@ Intermediate tool calls still matter because a correct-looking response can be p
 - [x] Regression suite
 - [x] Repeated-trial reliability benchmark
 - [x] Example evaluation report
-- [ ] Baseline-vs-candidate comparison
+- [x] Baseline-vs-candidate comparison
+- [ ] Semantic-judge calibration against human labels
 
 ## License
 
